@@ -1,0 +1,25 @@
+- snd/spill1.mp3: 40 CC0 water / splash / slime SFX / rubberduck / CC0
+- snd/spill2.mp3: 40 CC0 water / splash / slime SFX / rubberduck / CC0
+- snd/spill3.mp3: 40 CC0 water / splash / slime SFX / rubberduck / CC0
+- snd/drip1.mp3: 40 CC0 water / splash / slime SFX / rubberduck / CC0
+- snd/drip2.mp3: 40 CC0 water / splash / slime SFX / rubberduck / CC0
+- snd/step1.mp3: 100 CC0 SFX #2 / rubberduck / CC0
+- snd/step2.mp3: 100 CC0 SFX #2 / rubberduck / CC0
+- snd/step3.mp3: 50 RPG sound effects / Kenney / CC0
+- snd/bump1.mp3: 50 RPG sound effects / Kenney / CC0
+- snd/bump2.mp3: 50 RPG sound effects / Kenney / CC0
+- snd/thud.mp3: Thwack Sounds / AntumDeluge / CC0
+- snd/sneeze.mp3: File:Sneeze.ogg / Neo139 / CC0
+- snd/swing.mp3: Swishes Sound Pack / artisticdude / CC0
+- snd/ding.mp3: Elevator ding / fvcalderan / CC0
+- snd/clink.mp3: 75 CC0 breaking / falling / hit sfx / rubberduck / CC0
+- snd/coin.mp3: Coin Drop / Vinrax / CC0
+- snd/click.mp3: Interface Sounds / Kenney / CC0
+- snd/jgood.mp3: 85 Short music jingles / Kenney / CC0
+- snd/jmeh.mp3: 85 Short music jingles / Kenney / CC0
+- snd/jover.mp3: 85 Short music jingles / Kenney / CC0
+- snd/jrare.mp3: 85 Short music jingles / Kenney / CC0
+- snd/amb_robot.mp3: 100 CC0 SFX #2 / rubberduck / CC0
+- snd/amb_clock.mp3: File:Clock ticking.ogg / natalie / Public domain
+- snd/amb_office.mp3: 100 CC0 SFX #2 / rubberduck / CC0
+- snd/bgm.mp3: quirky vendor / Bobjt / CC-BY 3.0,CC0

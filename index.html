@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<script id="ghMove">if(location.hostname==='tom3games.github.io'){location.replace('https://tom3games.com/play/ochakumi/'+location.search+location.hash)}</script>
+<link rel="canonical" href="https://tom3games.com/play/ochakumi/">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>お茶汲み、こぼすな｜満タンのお茶を上司に運ぶ無料ゲーム</title>
+<meta name="description" content="新人のお茶汲み。線まで満タンの麦茶を、廊下・エレベーター・すれ違う同僚をこえて上司のデスクへ。指でお盆の傾きを戻し、あと一滴をこらえる。2回こぼしたら終わりのお茶出しゲーム。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="お茶汲み、こぼすな">
+<meta property="og:description" content="線まで満タンの麦茶を上司のデスクへ。こぼした分だけ上司の顔が曇る。何杯運べる？">
+<meta property="og:image" content="https://tom3games.com/play/ochakumi/og.png?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://tom3games.com/play/ochakumi/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#e9ebe6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+[hidden]{display:none!important}
+:root{--sky:#e9ebe6;--paper:#fbfbf7;--ink:#2a2f3a;--teal:#34495e;--coral:#d9483b;--mus:#f6dc6b;--soft:#6b7280;--tea:#b5651d;
+  --font:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;background:var(--sky)}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--font);color:var(--ink);overflow:hidden;height:100svh;background:var(--sky)}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.view{position:fixed;inset:0;height:100svh;overflow:hidden;z-index:2;background:var(--sky)}
+.wrap{position:relative;height:100%;max-width:480px;margin:0 auto}
+
+#loading{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--sky);transition:opacity .35s}
+#loading .gl{position:relative;width:46px;height:62px;border:3px solid var(--ink);border-top:0;border-radius:0 0 8px 8px;overflow:hidden;background:rgba(255,255,255,.6)}
+#loading .gl i{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--tea);opacity:.8;animation:fill 1.8s ease-in infinite}
+#loading .gl b{position:absolute;left:-2px;right:-2px;top:12px;border-top:2px solid var(--coral)}
+@keyframes fill{0%{height:0}80%{height:84%}100%{height:84%}}
+#loading p{font-size:15px;color:var(--soft);letter-spacing:.06em}
+#loadBar{width:150px;height:4px;background:rgba(59,42,32,.14);border-radius:2px;overflow:hidden}
+#loadBar i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
+
+/* タイトル */
+#vTitle .wrap{display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) 20px calc(14px + calc(env(safe-area-inset-bottom) + var(--inapp-bot,0px)))}
+#tArtBox{position:absolute;inset:0;z-index:0}
+#tArt{position:absolute;inset:0;width:100%;height:100%}
+#tH{position:relative;z-index:1;font-weight:700;font-size:min(12vw,52px,6.6svh);line-height:1.12;letter-spacing:.02em;text-shadow:0 2px 0 var(--paper),0 0 10px var(--paper)}
+#tH span{display:block}
+#tH .s2{margin-left:1.4em;color:var(--coral)}
+#tSub{position:relative;z-index:1;margin-top:6px;font-size:15px;color:var(--ink);text-shadow:0 0 6px var(--paper),0 0 3px var(--paper)}
+.grow{flex:1}
+#tBest{position:relative;z-index:1;font-size:14px;min-height:18px;text-align:center;margin-bottom:6px;text-shadow:0 0 6px var(--paper)}
+/* 一番押してほしいボタン = 黒いお盆 */
+#bStart{position:relative;z-index:1;align-self:center;width:210px;height:86px;margin-bottom:18px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#3a3330 0 58%,#1e1a18 60% 100%);border:3px solid var(--ink);box-shadow:0 6px 0 rgba(42,47,58,.55);transform:rotate(-3deg)}
+#bStart .t{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fbfbf7;letter-spacing:.2em}
+#bStart:active{transform:rotate(2deg) translateY(4px);box-shadow:0 2px 0 rgba(42,47,58,.55)}
+.tLinks{position:relative;z-index:1;display:flex;gap:14px;justify-content:center;align-items:center}
+.tLinks button{min-height:44px;padding:0 10px;font-size:15px;color:var(--ink);background:rgba(255,250,240,.82);border-radius:10px}
+.ico{width:22px;height:22px;fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* 遊ぶ */
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:0;right:0;top:0;z-index:5;pointer-events:none;padding:calc(8px + env(safe-area-inset-top)) 10px 0 10px;display:flex;justify-content:space-between;align-items:flex-start}
+/* あと何滴 = 黄色い付箋 */
+#slip{position:relative;background:var(--mus);padding:5px 12px 7px 12px;transform:rotate(-2.5deg);box-shadow:1px 3px 4px rgba(42,47,58,.25)}
+#hL{font-size:12px;font-weight:700}
+#hN{font-size:42px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+#hN small{font-size:15px;margin-left:3px}
+#hN.low{color:var(--coral)}
+#hX{display:flex;gap:6px;margin-top:4px}
+#hX svg{width:22px;height:14px}
+#hS{position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);font-size:15px;font-weight:700;background:rgba(251,251,247,.85);padding:2px 10px;border-radius:4px;white-space:nowrap}
+#bMute2{width:44px;height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;background:rgba(255,250,240,.75);border-radius:50%}
+#bub{position:absolute;z-index:8;max-width:64%;background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:3px 11px 5px;font-size:16px;line-height:1.3;width:max-content;pointer-events:none;opacity:0;transition:opacity .12s;transform:translate(-50%,-100%)}
+#bub.on{opacity:1}
+#pop{position:absolute;z-index:6;color:var(--ink);-webkit-text-stroke:6px var(--paper);paint-order:stroke fill;left:50%;top:24%;transform:translate(-50%,-50%);font-size:28px;white-space:nowrap;pointer-events:none;opacity:0}
+#pop.on{animation:pop 1.5s ease-out forwards}
+#pop.bad{color:var(--coral)}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-30%)}10%{opacity:1;transform:translate(-50%,-50%)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%)}}
+#tut{position:absolute;left:0;right:0;bottom:calc(18px + calc(env(safe-area-inset-bottom) + var(--inapp-bot,0px)));z-index:6;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;transition:opacity .4s}
+#tut p{font-size:15px;background:rgba(255,250,240,.92);padding:3px 12px;border-radius:8px}
+
+/* 結果 */
+#vEnd .wrap{display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top)) 14px calc(8px + calc(env(safe-area-inset-bottom) + var(--inapp-bot,0px)))}
+#resBox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#res{max-width:100%;max-height:100%;box-shadow:3px 5px 0 rgba(59,42,32,.2);transform:rotate(.8deg)}
+#res.in{animation:resIn .6s ease-out}
+@keyframes resIn{from{transform:translateY(-30px) rotate(-4deg);opacity:0}to{transform:rotate(.8deg);opacity:1}}
+.endBtns{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:10px}
+.endBtns .row{display:flex;gap:10px;justify-content:center;width:100%}
+.endBtns .row button{min-height:44px;padding:0 16px;font-size:15px;color:var(--ink);border-bottom:2px solid var(--ink)}
+#bAgain{width:min(70vw,250px);height:54px;background:#2a2421;color:var(--paper);border:3px solid var(--ink);border-radius:50%;font-weight:700;font-size:20px;letter-spacing:.1em;box-shadow:0 4px 0 var(--ink)}
+#bAgain:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+
+/* 遊び方 */
+.ovl{position:fixed;inset:0;z-index:80;background:rgba(59,42,32,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.ovl .in{position:relative;width:min(100%,420px);max-height:calc(100svh - 32px);overflow:auto;padding:18px 18px 12px;background:var(--paper);border:2px solid var(--ink)}
+.ovl h3{font-size:21px;font-weight:700;margin-bottom:10px}
+.ovl ol{padding-left:1.2em;display:flex;flex-direction:column;gap:9px;font-size:15px;line-height:1.6}
+.ovl ol b{font-weight:700;background:linear-gradient(transparent 62%,rgba(242,193,78,.7) 62%)}
+.ovl small{display:block;margin-top:12px;font-size:11px;line-height:1.5;color:var(--soft)}
+.ovl .close{display:block;margin:12px auto 0;min-height:44px;padding:0 24px;font-size:16px;border-bottom:2px solid var(--ink)}
+@media (max-height:700px){#tH{font-size:min(11vw,44px,6.4svh)}#bStart{transform:rotate(-6deg) scale(.85);margin-bottom:14px}#hN{font-size:34px}.ovl ol{font-size:14px;gap:6px}#bAgain{height:48px}}
+</style>
+</head>
+<body>
+<div id="loading"><div class="gl"><i></i><b></b></div><p id="loadTxt">お茶を注いでいます</p><div id="loadBar"><i></i></div></div>
+
+<main id="vTitle" class="view">
+  <div id="tArtBox"><canvas id="tArt" aria-hidden="true"></canvas></div>
+  <div class="wrap">
+    <h1 id="tH"></h1>
+    <p id="tSub"></p>
+    <div class="grow"></div>
+    <p id="tBest"></p>
+    <button id="bStart"><span class="t" id="bStartT"></span></button>
+    <div class="tLinks"><button id="bHow"></button><button id="bLang"></button><button id="bMute" aria-label="sound"><svg class="ico" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg></button></div>
+  </div>
+</main>
+
+<main id="vPlay" class="view" hidden>
+  <div class="wrap">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div id="slip"><div id="hL"></div><div id="hN"></div><div id="hX"></div></div><div id="hS"></div>
+    <button id="bMute2" aria-label="sound"><svg class="ico" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg></button>
+  </div>
+  <div id="bub"></div>
+  <div id="pop"></div>
+  <div id="tut"><p id="tutT"></p></div>
+  </div>
+</main>
+
+<main id="vEnd" class="view" hidden>
+  <div class="wrap">
+    <div id="resBox"><canvas id="res" width="1080" height="1350"></canvas></div>
+    <div class="endBtns">
+      <button id="bAgain"></button>
+      <div class="row"><button id="bSave"></button><button id="bPost"></button></div>
+    </div>
+  </div>
+</main>
+
+<div class="ovl" id="how" hidden><div class="in"><h3 id="howH"></h3><ol id="howBody"></ol><small id="howCred"></small><button class="close" id="howClose"></button></div></div>
+
+<script>
+(function(){
+  var opt={passive:false};
+  ['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,function(e){e.preventDefault()},opt)});
+  document.addEventListener('touchmove',function(e){if(e.touches&&e.touches.length>1)e.preventDefault()},opt);
+  var last=0;document.addEventListener('touchend',function(e){var n=Date.now();if(n-last<300&&!(e.target.closest&&e.target.closest('button,a')))e.preventDefault();last=n},opt);
+  document.addEventListener('dblclick',function(e){e.preventDefault()},opt);
+  window.addEventListener('wheel',function(e){if(e.ctrlKey)e.preventDefault()},opt);
+  window.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&['+','-','=','0',';'].indexOf(e.key)>=0)e.preventDefault()});
+})();
+(function(){
+  var errs=[];
+  window.addEventListener('error',function(e){errs.push((e.message||'error')+' @'+(e.filename||'')+':'+(e.lineno||''))});
+  window.addEventListener('unhandledrejection',function(e){errs.push('reject: '+(e.reason&&e.reason.message||e.reason))});
+  setTimeout(function(){
+    if(window.__jsUp) return;
+    var l=document.getElementById('loading');if(l)l.style.display='none';
+    var d=document.createElement('div');d.style.cssText='position:fixed;inset:auto 8px 8px 8px;z-index:199;background:#fff;color:#b00;font:12px/1.4 monospace;white-space:pre-wrap;padding:10px';
+    d.textContent='起動できませんでした / failed to start\n'+(errs.join('\n')||'(no error captured)')+'\n'+navigator.userAgent;
+    document.body.appendChild(d);
+  },15000);
+})();
+</script>
+<script src="tm.js?v=1" data-game="ochakumi"></script>
+<script src="sfx.js?v=1"></script>
+<script src="atlas.js?v=1"></script>
+<script src="data.js?v=1"></script>
+<script src="game.js?v=1"></script>
+<script src="support.js?v=1" data-ja="麦茶" data-en="a glass of barley tea"></script>
+</body>
+</html>
