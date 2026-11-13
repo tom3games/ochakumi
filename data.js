@@ -1,6 +1,8 @@
 // お茶汲み、こぼすな（ochakumi）の文言とデータ。仕様の正本: ~/Desktop/claudecode/ideas/ochakumi.md
 const OC_DATA = {
   MISSES: 2,
+  // この杯数を届けたら定時（クリア）。2026-11-13 本人「むずい」で終わりを作った
+  GOAL: 8,
   // 上司。sp は絵（ok / meh / mad）、m0 は線から上の滴の数、pts は届けた時の点
   BOSSES: {
     kacho: { sp: { ok: 'kacho_ok', meh: 'kacho_meh', mad: 'kacho_mad' }, m0: 9, pts: 1, ja: '課長', en: 'the manager',
@@ -25,10 +27,10 @@ const OC_DATA = {
     { min: 1, ja: '見習いお茶汲み', en: 'Tea trainee' },
     { min: 3, ja: '給湯室の新人', en: 'Kitchenette rookie' },
     { min: 6, ja: 'お茶汲み主任', en: 'Chief of tea' },
-    { min: 10, ja: 'こぼさない課長代理', en: 'Spill-free deputy' },
-    { min: 15, ja: '伝説の給湯係', en: 'Legend of the kettle' },
-    { min: 25, ja: '社長付きお茶係', en: 'The CEO’s tea person' },
   ],
+  // 定時まで運べた時（こぼさず＝入れ直し0回）
+  CLEAR: { ja: '定時退社の新人', en: 'Home on time' },
+  CLEAR0: { ja: 'こぼさない新人', en: 'Never spills' },
   TXT: {
     ja: {
       title: ['お茶汲み、', 'こぼすな'], sub: '満タンの麦茶を上司のデスクまで', start: '運ぶ', how: '遊び方', lang: 'English',
@@ -38,6 +40,7 @@ const OC_DATA = {
       howList: [
         '<b>指を左右に動かす</b>とお盆が同じ向きに傾く。傾いたら反対へ戻して水平に。',
         'コップの<b>赤い線より下まで減ったらやり直し</b>。2回で終わり。左上の数字はあと何滴こぼせるか。',
+        '<b>8杯届けたら定時</b>。最初は腕も元気。だんだん疲れて傾きやすくなる。',
         'ぶつかってくる人は<b>タップで声をかけるとよける</b>。ただし変なおじさんに声をかけると一口飲まれる。',
         '途中からコップが増える。たまに社長（3杯分・あと5滴しかない）。',
       ],
@@ -45,8 +48,9 @@ const OC_DATA = {
       order: (b, n) => n > 1 ? `${b}ほか ${n}杯` : `${b}へ 1杯`,
       drops: '滴', left: 'あと', out: 'アウト', shout: 'お茶です！', creep: 'デュフフ、いただきます',
       sneezeT: 'はっ…', slip: 'すべった', elevator: 'エレベーター', stairs: '階段',
+      prog: (d, g) => `${d}/${g}杯 定時まで`, clear: '定時です。おつかれさま', stamp: ['定時', '可', '要指導'],
       unit: '杯', resTitle: 'お茶汲み 勤務評定', resN: '運んだ杯数', resLast: '最後の上司のひとこと', resLeft: n => `最後のコップ あと${n}滴`,
-      postText: (n, r) => `お茶を${n}杯こぼさず運んだ。「${r}」 #お茶汲みこぼすな #ひまつぶし横丁`,
+      postText: (n, r, c) => c ? `お茶を${n}杯運んで定時で帰った。「${r}」 #お茶汲みこぼすな #ひまつぶし横丁` : `お茶を${n}杯こぼさず運んだ。「${r}」 #お茶汲みこぼすな #ひまつぶし横丁`,
     },
     en: {
       title: ['Don’t Spill', 'the Tea'], sub: 'Carry a brim-full glass to the boss', start: 'Carry', how: 'How to play', lang: '日本語',
@@ -56,6 +60,7 @@ const OC_DATA = {
       howList: [
         '<b>Slide your finger</b> and the tray tilts the same way. Tilt it back to keep it level.',
         '<b>Drop below the red line and you start over.</b> Twice and you are out. The number shows how many drops you can still spill.',
+        '<b>Serve 8 and it is 5 pm.</b> Your arms start fresh and tire as the day goes on.',
         '<b>Tap people</b> who are about to bump you and they step aside. Do not tap the weird guy. He takes a sip.',
         'Later you carry more glasses. Sometimes the CEO (worth 3, only 5 drops to spare).',
       ],
@@ -63,8 +68,9 @@ const OC_DATA = {
       order: (b, n) => n > 1 ? `${n} glasses` : `To ${b}`,
       drops: 'drops', left: '', out: 'OUT', shout: 'Tea coming!', creep: 'Heh heh, just a sip',
       sneezeT: 'Ah...', slip: 'Slipped', elevator: 'Elevator', stairs: 'Stairs',
+      prog: (d, g) => `${d}/${g} till 5pm`, clear: '5 pm. You can go home.', stamp: ['5 PM', 'OK', 'REDO'],
       unit: '', resTitle: 'Tea Duty Review', resN: 'Glasses served', resLast: 'The boss said', resLeft: n => `Last glass: ${n} to spare`,
-      postText: (n, r) => `Served ${n} glasses of tea without spilling. "${r}" #DontSpillTheTea`,
+      postText: (n, r, c) => c ? `Served ${n} glasses of tea and went home at 5. "${r}" #DontSpillTheTea` : `Served ${n} glasses of tea without spilling. "${r}" #DontSpillTheTea`,
     },
   },
 }

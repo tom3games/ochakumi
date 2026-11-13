@@ -55,6 +55,13 @@ const sprH = (name, w) => fr(name) ? w * fr(name)[3] / fr(name)[2] : w
 
 // ---- 調整値（sim で決めた値） ----
 const TUNE = { sag: 0.9, walk: 1.45, thr: 0.17, spillK: 42, drift: 0.07, impDecay: 0.75, hand: 13, kappa: 0.022, damp: 2.4, fingerK: 1.4, maxTilt: 0.7, step: 0.52 }
+// 難しさの上がり方（2026-11-13 本人「むずい」）。n は何回目の運びか（0から）。序盤はかなり易しく、定時の手前で元の強さに戻す
+const EASE = { thr: [0.28, 0.23], sag: [0.3, 0.45], drift: [0.4, 0.7], imp: [0.45, 0.75], extra: [4, 2] }
+function difOf(n) {
+  const k = clamp(n / Math.max(1, D.GOAL - 1), 0, 1), kk = k * k
+  const at = a => a[0] + (a[1] - a[0]) * kk
+  return { thr: at(EASE.thr), sag: at(EASE.sag), drift: at(EASE.drift), imp: at(EASE.imp), extra: Math.round(EASE.extra[0] + (EASE.extra[1] - EASE.extra[0]) * k) }
+}
 
 // ---- 画面 ----
 const cv = $('#cv')
@@ -72,7 +79,7 @@ addEventListener('resize', () => { resize(); sizeTitleArt() })
 const G = window.__ocG = { scene: 'title', phase: 'title', t: 0, paused: false }
 function reset() {
   Object.assign(G, {
-    phase: 'walk', t: 0, phT: 0, n: 0, served: 0, misses: 0, trips: 0, z: 0, L: 16, glasses: [], evs: [], fx: [],
+    phase: 'walk', t: 0, phT: 0, n: 0, served: 0, delivered: 0, cleared: false, misses: 0, trips: 0, dif: difOf(0), z: 0, L: 16, glasses: [], evs: [], fx: [],
     fT: 0, phi: 0, dDrift: 0, dImp: 0, driftV: 0.05, driftNext: 1.5, tau: 0, tauV: 0, stepT: 0, stepSide: 1, bob: 0,
     popUntil: 0, bubUntil: 0, bub: null, order: null, lastSay: null, lastBoss: 'kacho', lastFace: 'ok', lastLeft: 0,
     shouts: 0, creepSips: 0, elevs: 0, stairsN: 0, shachos: 0, bumps: 0, desk: null, fail: null, special: null, result: null, tutDone: false,
@@ -82,15 +89,18 @@ function reset() {
 
 // ---- 1回の運び（どの上司へ・何杯・廊下に何が出るか） ----
 function newTrip() {
-  const n = G.trips
-  const shacho = n >= 2 && R() < 0.14
+  // 難しさと上司は届けた杯数で決める（こぼして入れ直す時は同じ強さのまま）
+  const n = G.delivered
+  G.dif = difOf(n)
+  const shacho = n >= 4 && R() < 0.14
   let bosses = ['kacho']
   if (shacho) bosses = ['shacho']
-  else if (n >= 6) bosses = ['kacho', 'bucho', 'kacho']
-  else if (n >= 2) bosses = ['kacho', 'bucho']
+  else if (n >= D.GOAL - 1) bosses = ['kacho', 'bucho', 'kacho']
+  else if (n >= 3) bosses = ['kacho', 'bucho']
   const shrink = Math.min(4, Math.floor(n / 3))
-  G.glasses = bosses.map((b, i) => ({ boss: b, m0: Math.max(3, D.BOSSES[b].m0 - (b === 'shacho' ? 0 : shrink)), m: Math.max(3, D.BOSSES[b].m0 - (b === 'shacho' ? 0 : shrink)), s: 0, sv: 0, w: 6.2 + i * 1.5 + R() * 0.4, out: false, spillT: 0, side: 0 }))
-  G.L = clamp(16 + n * 2.6, 16, 42)
+  const mOf = b => b === 'shacho' ? D.BOSSES.shacho.m0 + Math.round(G.dif.extra / 2) : Math.max(3, D.BOSSES[b].m0 - shrink + G.dif.extra)
+  G.glasses = bosses.map((b, i) => ({ boss: b, m0: mOf(b), m: mOf(b), s: 0, sv: 0, w: 6.2 + i * 1.5 + R() * 0.4, out: false, spillT: 0, side: 0 }))
+  G.L = clamp(16 + n * 2.2, 16, 34)
   G.z = 0; G.phase = 'walk'; G.phT = 0
   G.fT = 0; G.phi = 0; G.dDrift = 0; G.dImp = 0; G.tau = 0; G.tauV = 0
   G.desk = null; G.fail = null
@@ -149,7 +159,7 @@ function drawHud() {
   $('#hN').innerHTML = `${v}<small>${t.drops}</small>`
   $('#hN').classList.toggle('low', v <= 2)
   $('#hX').innerHTML = Array.from({ length: D.MISSES }, (_, i) => SAUCER(i >= G.misses)).join('')
-  $('#hS').textContent = `${G.served}${t.unit || ' served'}`
+  $('#hS').textContent = t.prog(G.delivered, D.GOAL)
 }
 
 // ---- 入力（指の動きと同じ向きに傾く。人をタップすると声をかける） ----
@@ -190,7 +200,7 @@ function shoutAt(e) {
 
 // ---- こぼれる・届く ----
 function impulse(J, slosh, why) {
-  const up = 1 + Math.min(G.trips, 15) * 0.04
+  const up = G.dif.imp
   J *= up; slosh *= up
   G.dImp += J
   for (const g of G.glasses) g.sv += slosh * (R() < 0.5 ? -1 : 1) * rr(0.7, 1.1) + J * 2
@@ -204,7 +214,7 @@ function checkOut() {
     sfx('spill', { vol: 0.9 }); sfx('jover', { vol: 0.45, delay: 0.3 })
     pop(T().out, true, 1.4)
     G.fail = { boss: g.boss, t: 0 }
-    G.lastBoss = g.boss; G.lastFace = 'mad'; G.lastSay = D.BOSSES[g.boss].say[lang].miss; G.lastLeft = 0
+    G.lastBoss = g.boss; G.lastFace = 'mad'; G.lastSay = D.BOSSES[g.boss].say[lang].miss; G.lastLeft = 0; G.lastM0 = g.m0
     G.phase = 'fail'; G.phT = 0; ptr = null
     return true
   }
@@ -217,10 +227,10 @@ function arrive() {
   let worst = null
   for (const g of G.glasses) { g.k = g.m / g.m0; if (!worst || g.k < worst.k) worst = g }
   let pts = 0; for (const g of G.glasses) pts += D.BOSSES[g.boss].pts
-  G.served += pts; G.n = G.served
+  G.served += pts; G.n = G.served; G.delivered++
   const k = worst.k, face = k >= 0.6 ? 'full' : k >= 0.3 ? 'mid' : 'low'
   const boss = G.glasses.length > 1 ? 'kacho' : worst.boss
-  G.lastBoss = worst.boss; G.lastFace = face === 'full' ? 'ok' : 'meh'; G.lastLeft = Math.max(0, Math.ceil(worst.m)); G.lastSay = D.BOSSES[worst.boss].say[lang][face]
+  G.lastBoss = worst.boss; G.lastFace = face === 'full' ? 'ok' : 'meh'; G.lastLeft = Math.max(0, Math.ceil(worst.m)); G.lastM0 = worst.m0; G.lastSay = D.BOSSES[worst.boss].say[lang][face]
   G.desk = { boss, face: face === 'full' ? 'ok' : 'meh' }
   sfx('clink', { vol: 0.7 }); sfx(face === 'full' ? 'jgood' : 'jmeh', { vol: 0.45, delay: 0.25 })
   if (face === 'full') sfx('coin', { vol: 0.4, delay: 0.5 })
@@ -235,7 +245,8 @@ function update(dt) {
   if (G.scene !== 'play') return
   for (const p of G.fx) { p.t += dt; p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt }
   G.fx = G.fx.filter(p => p.t < p.life)
-  if (G.phase === 'desk') { if (G.phT > 2.6) newTrip(); return }
+  if (G.phase === 'desk') { if (G.phT > 2.6) { if (G.delivered >= D.GOAL) { G.cleared = true; G.phase = 'clear'; G.phT = 0; sfx('coin', { vol: 0.5 }); pop(T().clear, false, 2.2) } else newTrip() } return }
+  if (G.phase === 'clear') { if (G.phT > 2.0) showEnd(); return }
   if (G.phase === 'fail') { if (G.phT > 2.2) { if (G.misses >= D.MISSES) { G.phase = 'over'; G.phT = 0 } else newTrip() } return }
   if (G.phase === 'over') { if (G.phT > 0.6) showEnd(); return }
 
@@ -263,8 +274,8 @@ function update(dt) {
 
   // 腕の疲れ（ゆっくり傾いていく）
   G.driftNext -= dt
-  if (G.driftNext <= 0) { G.driftNext = rr(1.6, 3.4); G.driftV = (R() < 0.5 ? -1 : 1) * rr(0.045, 0.1) * (1 + Math.min(G.trips, 8) * 0.05) }
-  G.dDrift = clamp(G.dDrift + (G.driftV + TUNE.sag * G.tau) * dt, -0.7, 0.7)
+  if (G.driftNext <= 0) { G.driftNext = rr(1.6, 3.4); G.driftV = (R() < 0.5 ? -1 : 1) * rr(0.045, 0.1) * G.dif.drift }
+  G.dDrift = clamp(G.dDrift + (G.driftV + G.dif.sag * G.tau) * dt, -0.7, 0.7)
   G.dImp *= Math.exp(-TUNE.impDecay * dt)
 
   // 手は指を追いかける
@@ -322,8 +333,8 @@ function update(dt) {
     g.sv += a * dt; g.s += g.sv * dt
     g.s = clamp(g.s, -0.9, 0.9)
     const psi = tau + g.s
-    if (Math.abs(psi) > TUNE.thr) {
-      const amt = (Math.abs(psi) - TUNE.thr) * TUNE.spillK * dt
+    if (Math.abs(psi) > G.dif.thr) {
+      const amt = (Math.abs(psi) - G.dif.thr) * TUNE.spillK * dt
       g.m -= amt; spilled += amt; g.side = sgn(psi); g.spillT += dt
       if (R() < amt * 6) G.fx.push({ x: 0, y: 0, gi: i, side: g.side, vx: g.side * rr(60, 160), vy: rr(-140, -40), t: 0, life: 0.7 })
     }
@@ -565,9 +576,9 @@ function startGame() {
 }
 
 // ---- 結果（SNS に貼れる1枚 = 勤務評定） ----
-const rankOf = n => { let r = D.RANKS[0]; for (const k of D.RANKS) if (n >= k.min) r = k; return r }
+const rankOf = (n, cleared, misses) => { if (cleared) return misses ? D.CLEAR : D.CLEAR0; let r = D.RANKS[0]; for (const k of D.RANKS) if (n >= k.min) r = k; return r }
 function drawCard(c, Wc, Hc) {
-  const t = T(), n = G.served, rk = rankOf(n)
+  const t = T(), n = G.served, rk = rankOf(n, G.cleared, G.misses)
   c.setTransform(1, 0, 0, 1, 0, 0)
   c.fillStyle = '#fbfbf7'; c.fillRect(0, 0, Wc, Hc)
   const Fn = (wt, px) => `${wt} ${px}px "BIZ UDPGothic","Hiragino Sans",sans-serif`
@@ -579,7 +590,7 @@ function drawCard(c, Wc, Hc) {
   const nw = c.measureText(ns).width; c.font = Fn(700, 64); c.fillText(t.unit, 96 + nw, 404)
   c.fillStyle = '#d9483b'; c.font = Fn(700, 54); c.fillText(rk[lang], 500, 300)
   // ハンコ
-  c.save(); c.translate(Wc - 190, 370); c.rotate(-0.18); c.strokeStyle = '#d9483b'; c.lineWidth = 7; c.beginPath(); c.arc(0, 0, 74, 0, 7); c.stroke(); c.fillStyle = '#d9483b'; c.font = Fn(700, 34); c.textAlign = 'center'; c.fillText(lang === 'ja' ? (n >= 3 ? '可' : '要指導') : (n >= 3 ? 'OK' : 'REDO'), 0, 12); c.restore()
+  c.save(); c.translate(Wc - 180, 390); c.rotate(-0.18); c.strokeStyle = '#d9483b'; c.lineWidth = 7; c.beginPath(); c.arc(0, 0, 74, 0, 7); c.stroke(); c.fillStyle = '#d9483b'; c.font = Fn(700, 34); c.textAlign = 'center'; c.fillText(t.stamp[G.cleared ? 0 : n >= 3 ? 1 : 2], 0, 12); c.restore()
   c.textAlign = 'left'
   c.strokeStyle = 'rgba(42,47,58,.3)'; c.lineWidth = 2; c.beginPath(); c.moveTo(80, 470); c.lineTo(Wc - 80, 470); c.stroke()
   c.fillStyle = '#6b7280'; c.font = Fn(400, 32); c.fillText(t.resLast, 84, 530)
@@ -597,7 +608,7 @@ function drawCard(c, Wc, Hc) {
 }
 function drawCardGlass(c, x, base, w) {
   const h = w * 1.25, botW = w * 0.78, rim = base - h, lineY = base - h * 0.64
-  const m0 = (D.BOSSES[G.lastBoss] || D.BOSSES.kacho).m0, lv = lineY - Math.max(0, G.lastLeft) / m0 * (lineY - rim) * 0.92
+  const m0 = G.lastM0 || (D.BOSSES[G.lastBoss] || D.BOSSES.kacho).m0, lv = lineY - Math.max(0, G.lastLeft) / m0 * (lineY - rim) * 0.92
   const path = () => { c.beginPath(); c.moveTo(x - botW / 2, base); c.lineTo(x - w / 2, rim); c.lineTo(x + w / 2, rim); c.lineTo(x + botW / 2, base); c.closePath() }
   c.save(); path(); c.clip(); c.fillStyle = 'rgba(181,101,29,.82)'; c.fillRect(x - w, G.lastFace === 'mad' ? lineY + 30 : lv, w * 2, h); c.restore()
   path(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke()
@@ -631,9 +642,9 @@ function showEnd() {
   const n = G.served
   let b = 0; try { b = +localStorage.getItem('oc_best') || 0 } catch (e) {}
   if (n > b) { try { localStorage.setItem('oc_best', String(n)) } catch (e) {} }
-  G.result = { n, rank: rankOf(n)[lang], newBest: n > b, trips: G.trips, shouts: G.shouts, creepSips: G.creepSips, elevs: G.elevs, stairs: G.stairsN, shachos: G.shachos, bumps: G.bumps, t: +G.t.toFixed(1) }
+  G.result = { n, cleared: G.cleared, delivered: G.delivered, misses: G.misses, rank: rankOf(n, G.cleared, G.misses)[lang], newBest: n > b, trips: G.trips, shouts: G.shouts, creepSips: G.creepSips, elevs: G.elevs, stairs: G.stairsN, shachos: G.shachos, bumps: G.bumps, t: +G.t.toFixed(1) }
   drawRes(); const el = $('#res'); el.classList.remove('in'); void el.offsetWidth; el.classList.add('in')
-  window.TM && TM.end(n, n >= 6)
+  window.TM && TM.end(n, G.cleared)
   applyLang()
 }
 on('#bSave', async () => {
@@ -649,7 +660,7 @@ on('#bSave', async () => {
 on('#bPost', () => {
   window.TM && TM.share('x')
   const r = G.result || { n: 0, rank: '' }
-  const u = 'https://x.com/intent/post?text=' + encodeURIComponent(T().postText(r.n, r.rank)) + '&url=' + encodeURIComponent('https://tom3games.com/play/ochakumi/')
+  const u = 'https://x.com/intent/post?text=' + encodeURIComponent(T().postText(r.n, r.rank, r.cleared)) + '&url=' + encodeURIComponent('https://tom3games.com/play/ochakumi/')
   window.open(u, '_blank', 'noopener')
 })
 
@@ -671,16 +682,19 @@ requestAnimationFrame(frame)
 boot()
 
 // ---- 人の速さで遊ぶ bot（sim と ?demo=1 で使う） ----
-// cfg: lag 見てから動くまで（秒）/ err ずれ / gain 戻す強さ / spd 指の速さ（傾き/秒）/ pre ぶつかる前に先に傾ける / shout 声をかける / slosh 波も見る / tapCreep 変なおじさんにも声をかける
+// cfg: delay 見えている傾きの遅れ（秒。人は見てから動くまで遅れる）/ lag 考え直す間隔（秒）/ err ずれ / gain 戻す強さ / spd 指の速さ（傾き/秒）/ pre ぶつかる前に先に傾ける / shout 声をかける / slosh 波も見る / tapCreep 変なおじさんにも声をかける
 function makeBot(cfg, rnd = Math.random) {
   let want = 0, next = 0
+  const hist = []
   const gauss = () => (rnd() + rnd() + rnd() - 1.5) * 1.15
   return function step(dt) {
+    hist.push({ t: G.t, d: G.dDrift + G.dImp })
+    while (hist.length > 2 && hist[1].t <= G.t - (cfg.delay || 0)) hist.shift()
     if (G.phase !== 'walk') { want = 0; return }
     if (G.t >= next) {
       next = G.t + (cfg.lag || 0.3)
       const sAvg = G.glasses.length ? G.glasses.reduce((a, g) => a + (g.out ? 0 : g.s), 0) / G.glasses.length : 0
-      want = -(G.dDrift + G.dImp) * (cfg.gain || 1) - (cfg.slosh ? sAvg * 0.6 : 0) + gauss() * (cfg.err || 0)
+      want = -(cfg.delay ? hist[0].d : G.dDrift + G.dImp) * (cfg.gain || 1) - (cfg.slosh ? sAvg * 0.6 : 0) + gauss() * (cfg.err || 0)
       if (cfg.pre) for (const e of G.evs) {
         const d = e.z - G.z, E = D.EVENTS[e.kind]
         if (e.done || e.hit || e.aside || d < 0 || d > 1.3) continue
@@ -717,7 +731,7 @@ if (/[?&]demo=1/.test(location.search)) {
 
 // ---- 検証用の窓口 ----
 window.oc = {
-  G, D, TUNE, start: startGame, result: () => G.result, rankOf, makeBot, shoutAt, lang: () => lang,
+  G, D, TUNE, EASE, start: startGame, result: () => G.result, rankOf, makeBot, shoutAt, lang: () => lang,
   state: () => ({ scene: G.scene, phase: G.phase, t: +G.t.toFixed(2), served: G.served, misses: G.misses, trips: G.trips, z: +G.z.toFixed(2), L: +G.L.toFixed(1), tau: +G.tau.toFixed(3), fT: +G.fT.toFixed(3), glasses: G.glasses.map(g => ({ boss: g.boss, m: +g.m.toFixed(2), out: g.out })), bub: G.bub && G.t < G.bubUntil ? G.bub.text : null, evs: G.evs.map(e => ({ kind: e.kind, d: +(e.z - G.z).toFixed(1), aside: e.aside, hit: !!e.hit })) }),
   evXY: kind => { const e = G.evs.find(e => e.kind === kind && e.box && !e.done); if (!e) return null; const r = cv.getBoundingClientRect(); return { x: r.left + (e.box.x0 + e.box.x1) / 2, y: r.top + (e.box.y0 * 0.4 + e.box.y1 * 0.6) } },
   dbg: {

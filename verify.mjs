@@ -49,7 +49,7 @@ const variance = (p, sel) => p.evaluate(sel => {
   return Math.round(s2 / n - (s / n) ** 2)
 }, sel)
 const SIZES = [[360, 640, 'small'], [375, 667, 'se'], [390, 844, 'phone'], [412, 915, 'android'], [430, 932, 'max'], [768, 1024, 'tablet']]
-const HUMAN = "{ lag: 0.45, err: 0.03, gain: 1, spd: 2, pre: true }"
+const HUMAN = "{ delay: 0.3, lag: 0.2, err: 0.03, gain: 1, spd: 2, pre: true }"
 const EXPERT = "{ lag: 0.25, err: 0.015, gain: 1, spd: 2.5, pre: true, shout: true, slosh: true }"
 
 const browser = await chromium.launch(MUTE_LAUNCH)
@@ -137,9 +137,23 @@ await t('もう一回で最初から（0杯・ミス0）', async () => {
   const r = await p.evaluate(() => oc.state())
   expect(r.scene === 'play' && r.served === 0 && r.misses === 0 && r.trips === 1, JSON.stringify(r)); return r.phase
 })
-await t('何もしない通しは最低の称号（床を拭く係）', async () => {
-  const rs = await p.evaluate(() => { const out = []; for (let s = 1; s <= 6; s++) { oc.dbg.seed(s * 31); oc.start(); oc.dbg.pause(); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 120) oc.dbg.tick(1); out.push({ n: oc.G.served, rank: oc.rankOf(oc.G.served).ja, scene: oc.G.scene }) } return out })
-  expect(rs.every(r => r.rank === '床を拭く係' && r.scene === 'end'), JSON.stringify(rs)); return rs.map(r => r.n).join(',')
+await t('何もしないと定時まで行けない（1杯まで・下2つの称号）', async () => {
+  const rs = await p.evaluate(() => { const out = []; for (let s = 1; s <= 6; s++) { oc.dbg.seed(s * 31); oc.start(); oc.dbg.pause(); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 120) oc.dbg.tick(1); out.push({ n: oc.G.served, rank: oc.result().rank, cl: oc.result().cleared, scene: oc.G.scene }) } return out })
+  expect(rs.every(r => r.n <= 1 && !r.cl && ['床を拭く係', '見習いお茶汲み'].includes(r.rank) && r.scene === 'end'), JSON.stringify(rs)); return rs.map(r => r.n).join(',')
+})
+await t('8杯届けると定時（クリア）で勤務評定に定時のはんこ', async () => {
+  await p.evaluate(() => { oc.dbg.seed(21); oc.start(); oc.dbg.pause(); for (let i = 0; i < 8; i++) { oc.dbg.arrive(); oc.dbg.tick(170) } oc.dbg.tick(200) })
+  const r = await p.evaluate(() => ({ s: oc.state(), res: oc.result(), hs: document.querySelector('#hS').textContent }))
+  await p.waitForTimeout(700); await p.screenshot({ path: `${ROOT}/shots/v-clear.png` })
+  expect(r.s.scene === 'end' && r.res.cleared && r.res.delivered === 8 && r.res.rank === 'こぼさない新人', JSON.stringify(r)); return r.res
+})
+await t('序盤は易しく後半で上がる（こぼれる角度・腕の疲れ・滴の数）', async () => {
+  const r = await p.evaluate(() => { oc.dbg.seed(5); oc.start(); oc.dbg.pause(); const a = { ...oc.G.dif, m0: oc.G.glasses[0].m0 }; for (let i = 0; i < 7; i++) { oc.dbg.arrive(); oc.dbg.tick(170) } const b = { ...oc.G.dif, m0: Math.min(...oc.G.glasses.map(g => g.m0)), n: oc.G.glasses.length }; return { a, b } })
+  expect(r.a.thr > r.b.thr && r.a.sag < r.b.sag && r.a.drift < r.b.drift && r.a.m0 > r.b.m0 && r.b.n === 3, JSON.stringify(r)); return r
+})
+await t('人の速さの bot（見てから0.3秒遅れ・手のぶれ）が定時まで行ける（16回中10回以上）', async () => {
+  const n = await p.evaluate((H) => { let c = 0; for (let s = 1; s <= 16; s++) { oc.dbg.seed(s * 41 + 3); oc.start(); oc.dbg.pause(); let r0 = s * 5 + 1; const Rb = () => (r0 = r0 * 16807 % 2147483647) / 2147483647; const bot = oc.makeBot(eval('(' + H + ')'), Rb); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 400) { bot(1 / 60); oc.dbg.tick(1) } if (oc.result() && oc.result().cleared) c++ } return c }, HUMAN)
+  expect(n >= 10, n); return n + '/16'
 })
 await t('同じ種と同じ操作なら同じ結果（3回）', async () => {
   const rs = await p.evaluate((H) => { const out = []; for (let i = 0; i < 3; i++) { oc.dbg.seed(4242); oc.start(); oc.dbg.pause(); let r0 = 9; const Rb = () => (r0 = r0 * 16807 % 2147483647) / 2147483647; const bot = oc.makeBot(eval('(' + H + ')'), Rb); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 400) { bot(1 / 60); oc.dbg.tick(1) } out.push(oc.G.served + '/' + oc.G.t.toFixed(2)) } return out }, HUMAN)
@@ -150,8 +164,8 @@ await t('人の速さの bot は最初の1杯を運べる（12回中10回以上�
   expect(rs.filter(Boolean).length >= 10, JSON.stringify(rs)); return rs.filter(Boolean).length
 })
 await t('上手い操作（先読み・声かけ・なめらか）が、雑に大きく動かすより運ぶ', async () => {
-  const r = await p.evaluate((E) => { const run = cfg => { let sum = 0; for (let s = 1; s <= 8; s++) { oc.dbg.seed(s * 53 + 3); oc.start(); oc.dbg.pause(); let r0 = s * 7 + 1; const Rb = () => (r0 = r0 * 16807 % 2147483647) / 2147483647; const bot = oc.makeBot(cfg, Rb); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 400) { bot(1 / 60); oc.dbg.tick(1) } sum += oc.G.served } return sum / 8 }; return { good: run(eval('(' + E + ')')), jerky: run({ lag: 0.15, err: 0.05, gain: 2.2, spd: 9 }) } }, EXPERT)
-  expect(r.good >= 3 && r.good > r.jerky * 2, JSON.stringify(r)); return r
+  const r = await p.evaluate((E) => { const run = cfg => { let sum = 0; for (let s = 1; s <= 8; s++) { oc.dbg.seed(s * 53 + 3); oc.start(); oc.dbg.pause(); let r0 = s * 7 + 1; const Rb = () => (r0 = r0 * 16807 % 2147483647) / 2147483647; const bot = oc.makeBot(cfg, Rb); let f = 0; while (oc.G.scene === 'play' && f++ < 60 * 400) { bot(1 / 60); oc.dbg.tick(1) } sum += oc.G.served } return sum / 8 }; return { good: run(eval('(' + E + ')')), jerky: run({ delay: 0.15, lag: 0.15, err: 0.06, gain: 2.2, spd: 9 }) } }, EXPERT)
+  expect(r.good >= 12 && r.good > r.jerky * 1.3, JSON.stringify(r)); return r
 })
 await t('文字は同時に1つまで（吹き出しと大きい文字が重ならない）', async () => {
   const r = await p.evaluate((H) => { oc.dbg.seed(5); oc.start(); oc.dbg.pause(); let r0 = 7; const Rb = () => (r0 = r0 * 16807 % 2147483647) / 2147483647; const bot = oc.makeBot(eval('(' + H + ')'), Rb); let both = 0, bubs = 0, f = 0; while (oc.G.scene === 'play' && f++ < 60 * 300) { bot(1 / 60); oc.dbg.tick(1); if (f % 6 === 0) { oc.dbg.render(); const b = document.querySelector('#bub').classList.contains('on'), pp = oc.G.t < oc.G.popUntil; if (b) bubs++; if (b && pp) both++ } } return { both, bubs } }, HUMAN)
@@ -180,7 +194,7 @@ await t('遊び方が開いて閉じる', async () => {
   const q = await open(browser)
   await q.click('#bHow'); const a = await q.evaluate(() => !document.querySelector('#how').hidden && document.querySelectorAll('#howBody li').length)
   await q.click('#howClose'); const b = await q.evaluate(() => document.querySelector('#how').hidden)
-  await q.close(); expect(a === 4 && b, JSON.stringify({ a, b }))
+  await q.close(); expect(a === 5 && b, JSON.stringify({ a, b }))
 })
 await t('X 内ブラウザ（?inapp=x）: 下52pxに操作が入らない', async () => {
   const q = await open(browser)
